@@ -10,6 +10,12 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 from gensim.models import Word2Vec
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+result_loss = []
+acc_train = []
 
 
 def loadDataSet():
@@ -27,7 +33,7 @@ def loadDataSet():
         else:
             item = item.split(' ')
             commentlist.append(item)
-        cnt += 1
+            cnt += 1
     for item in outlabellist:
         if item > 3:
             labellist.append(1)
@@ -46,7 +52,7 @@ def evaluation(outputs, labels):
 
 
 def train_word2vec(commentlist):
-    model = Word2Vec(commentlist, size=100, window=5, min_count=1, workers=4, iter=5, sg=0)
+    model = Word2Vec(commentlist, size=128, window=5, min_count=2, workers=4, iter=5, sg=0)
     return model
 
 
@@ -249,6 +255,8 @@ def training(batch_size, n_epoch, lr, X_train, y_train, val_loader, model, devic
         print('Epoch | {}/{}'.format(epoch + 1, n_epoch))
         t_batch = len(train_loader)
         print('Train | Loss:{:.5f} Acc: {:.3f}'.format(total_loss / t_batch, total_acc / t_batch * 100))
+        result_loss.append(total_loss/t_batch)
+        acc_train.append(total_acc/t_batch*100)
 
         model.eval()  # 将 model 的模式设为 eval，这样 model 的参数就会被固定住
         # self-training
@@ -305,11 +313,11 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # 定义句子长度、要不要固定 embedding、batch 大小、要训练几个 epoch、 学习率的值、 w2v的路径
-    sen_len = 80
+    sen_len = 128
     fix_embedding = True  # fix embedding during training
     batch_size = 32
     epoch = 20
-    lr = 2e-3
+    lr = 2e-4
     w2v_path = 'w2v_all.model'
 
     print("loading data ...")
@@ -321,6 +329,7 @@ if __name__ == "__main__":
     train_x = preprocess.sentence_word2idx(commentlist)
     y = preprocess.labels_to_tensor(labellist)
 
+
     # train_x_no_label = preprocess.sentence_word2idx(train_x_no_label)
 
     # 把 data 分为 training data 和 validation data（将一部分 training data 作为 validation data）
@@ -331,15 +340,38 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
     # 定义模型
-    model = Atten_BiLSTM(embedding, embedding_dim=100, hidden_dim=96, num_layers=1, dropout=0.5,
+    model = Atten_BiLSTM(embedding, embedding_dim=128, hidden_dim=96, num_layers=1, dropout=0.5,
                          fix_embedding=fix_embedding)
     model = model.to(device)  # device为 "cuda"，model 使用 GPU 来训练（inputs 也需要是 cuda tensor）
     # 开始训练
-    training(batch_size, 10, lr, X_train, y_train, val_loader, model, device)
+    training(batch_size, epoch, lr, X_train, y_train, val_loader, model, device)
     # 测试模型并作预测
     test_x = preprocess.sentence_word2idx(X_val)
     test_dataset = JDDataset(X=test_x, y=y_val)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+
+
+    #画折线图
+    x = np.arange(len(result_loss)+1).astype(dtype=np.str)
+    y1 = np.array(1)
+    y2 = np.array(1)
+    y1 = np.append(y1, np.array(result_loss))
+    y2 = np.append(y2, np.array(acc_train))
+    plt.plot(x, y1)
+    plt.title('loss')
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.ylim(0, 0.8)
+    plt.savefig('loss.png')
+    plt.show()
+
+    plt.plot(x, y2)
+    plt.title('acc')
+    plt.xlabel('epochs')
+    plt.ylabel('acc')
+    plt.ylim(90, 100)
+    plt.savefig('acc.png')
+    plt.show()
 
     # 读取模型
     # print('\nload model ...')

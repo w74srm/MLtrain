@@ -17,7 +17,7 @@ proxies = {'http': ['http://110.243.16.155:9999',
                     'http://139.159.7.150:52908']}
 
 
-JD_Id = ['100006487373', '100007218425', '100012445728', '100007852387', '100007270267', '100006546527']
+JD_Id = ['100006487373', '100007218425', '100012445728', '100007852387', '100007270267', '100006546527', '100013312610', '100011773072', '100007539330', '12579070740']
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
     cnt = 0
     baseurl = "https://club.jd.com/comment/productPageComments.action?callback=fetchJSON_comment98&productId={}&score={}&sortType=5&page={}&pageSize=10&isShadowSku=0&rid=0&fold=1"
     savepath = "jdcomment.csv"
-    for k in range(6):
+    for k in range(10):
         for i in range(1, 4):
             for j in range(100):
                 url = baseurl.format(JD_Id[k], i, j)
